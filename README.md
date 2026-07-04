@@ -18,9 +18,9 @@
 
 ## Скриншоты и демонстрация
 
-![Демонстрация работы бота](https://imgur.com/a/7YH6HCu)
-![Возможность скрывать результаты](https://imgur.com/a/MAjmCfq)
-![Подбор вузов](https://imgur.com/a/nhO4pZ5)
+![Демонстрация работы бота](https://i.imgur.com/VrsKTaN.png)
+![Возможность скрывать результаты](https://i.imgur.com/AmLXubq.png)
+![Подбор вузов](https://i.imgur.com/ZzTJvfT.png)
 
 ## Как запустить
 
