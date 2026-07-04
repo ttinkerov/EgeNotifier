@@ -1,0 +1,12 @@
+aiogram>=3.13,<4
+
+# HTTP & async
+aiohttp>=3.9,<4
+
+# Database
+asyncpg>=0.29,<1
+
+# Config & validation
+pydantic>=2.7,<3
+pydantic-settings>=2.3,<3
+loguru>=0.7,<1
