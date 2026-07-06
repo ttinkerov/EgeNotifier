@@ -88,14 +88,18 @@ SUBJECTS: dict[int, str] = {
 }
 
 
+SUBJECT_PICKER_TEXT = (
+    "*Выберите субъект РФ* — введите двузначный код:\n"
+    + "\n".join(f"`{code:02d}` · {title}" for code, title in sorted(SUBJECTS.items()))
+)
+
+
 def subject_exists(code: int) -> bool:
     return code in SUBJECTS
 
 
 def render_subject_picker() -> str:
-    header = "*Выберите субъект РФ* — введите двузначный код:\n"
-    rows = [f"`{code:02d}` · {title}" for code, title in sorted(SUBJECTS.items())]
-    return header + "\n".join(rows)
+    return SUBJECT_PICKER_TEXT
 
 
 def describe_subject(code: int) -> str:

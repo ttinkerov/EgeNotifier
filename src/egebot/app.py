@@ -4,6 +4,7 @@ import asyncio
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
+from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 from loguru import logger
@@ -81,8 +82,10 @@ async def _run() -> None:
     settings_svc = SettingsService(accounts)
     uni_svc = UniversitiesService()
 
+    session = AiohttpSession(proxy=settings.proxy_url) if settings.proxy_url else None
     bot = Bot(
         token=settings.tg_api_token,
+        session=session,
         default=DefaultBotProperties(parse_mode=ParseMode.MARKDOWN),
     )
     dp = _build_dispatcher(

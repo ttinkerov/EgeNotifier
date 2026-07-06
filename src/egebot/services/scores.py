@@ -8,7 +8,7 @@ from egebot.domain.exam_snapshot import (
     FetchScoresStatus,
     compute_snapshot_hash,
 )
-from egebot.domain.models import ExamScore
+from egebot.domain.models import ExamScore, TgAccount
 from egebot.storage.repositories.accounts import AccountRepository
 
 SCORES_PARSE_MODE = "HTML"
@@ -49,7 +49,9 @@ class ScoresService:
         account = await self._accounts.get(telegram_id)
         if account is None:
             return FetchScoresResult.unauthorized()
+        return await self.fetch_for_account(account)
 
+    async def fetch_for_account(self, account: TgAccount) -> FetchScoresResult:
         exams = await self._rustest.fetch_scores(account.session_token)
         if exams is None:
             return FetchScoresResult.portal_down()
@@ -62,10 +64,13 @@ class ScoresService:
         telegram_id: int,
         exams: list[ExamScore],
         *,
+        account: TgAccount | None = None,
         highlight_updates: bool = False,
         persist_snapshot: bool = True,
+        snapshot_hash: str | None = None,
     ) -> str:
-        account = await self._accounts.get(telegram_id)
+        if account is None:
+            account = await self._accounts.get(telegram_id)
         use_spoiler = account.spoiler_scores if account else False
         total = 0
         show_total = True
@@ -106,7 +111,7 @@ class ScoresService:
             sum_text = f"{total}{_mark_label(total, '')}"
             lines.append(f"\n<i>Сумма:</i> {_format_mark(sum_text, spoiler=use_spoiler)}")
 
-        new_hash = compute_snapshot_hash(exams)
+        new_hash = snapshot_hash if snapshot_hash is not None else compute_snapshot_hash(exams)
         if persist_snapshot and account and account.snapshot_hash != new_hash:
             await self._accounts.update_snapshot(telegram_id, new_hash)
 

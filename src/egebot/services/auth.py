@@ -6,7 +6,7 @@ from loguru import logger
 
 from egebot.content.federal_subjects import describe_subject, subject_exists
 from egebot.core.rustest import CaptchaPayload, RustestClient
-from egebot.domain.models import AuthDraft, SignInStatus, TgAccount
+from egebot.domain.models import AuthDraft, ExamScore, SignInStatus, TgAccount
 from egebot.services.scores import ScoresService
 from egebot.storage.repositories.accounts import AccountRepository
 from egebot.storage.repositories.auth_drafts import AuthDraftRepository
@@ -75,14 +75,14 @@ class AuthService:
         await self._drafts.update(telegram_id, step="login", challenge_reply=answer)
         return True
 
-    async def complete_login(self, telegram_id: int) -> SignInStatus:
+    async def complete_login(self, telegram_id: int) -> tuple[SignInStatus, list[ExamScore] | None]:
         draft = await self._drafts.get(telegram_id)
         if draft is None:
-            return SignInStatus.BAD_CREDENTIALS
+            return SignInStatus.BAD_CREDENTIALS, None
 
         status, token = await self._rustest.sign_in(draft)
         if status is not SignInStatus.OK or not token:
-            return status
+            return status, None
 
         assert draft.subject_code is not None
         await self._accounts.save(
@@ -97,7 +97,7 @@ class AuthService:
             await self._scores.seed_snapshot(telegram_id, exams)
         await self._drafts.delete(telegram_id)
         logger.info("Login completed for user {}", telegram_id)
-        return SignInStatus.OK
+        return SignInStatus.OK, exams
 
     async def reset_captcha_step(self, telegram_id: int) -> None:
         await self._drafts.update(

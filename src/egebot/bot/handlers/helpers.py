@@ -8,7 +8,6 @@ from egebot.bot.keyboards import (
     guest_keyboard,
     member_keyboard,
     refresh_scores as refresh_scores_kb,
-    retry_auth as retry_auth_kb,
 )
 from egebot.bot.states import AuthFlow
 from egebot.content import ui_copy as t
@@ -65,11 +64,12 @@ async def send_scores(message: Message, session_svc: SessionService, scores_svc:
     if user is None:
         return
 
-    if not await session_svc.is_logged_in(user.id):
+    account = await session_svc.get_account(user.id)
+    if account is None:
         await message.answer(t.NEED_AUTH, reply_markup=guest_keyboard())
         return
 
-    result = await scores_svc.fetch_for_user(user.id)
+    result = await scores_svc.fetch_for_account(account)
     if result.status is FetchScoresStatus.PORTAL_DOWN:
         await message.answer(t.PORTAL_DOWN, reply_markup=member_keyboard())
         return
@@ -80,7 +80,7 @@ async def send_scores(message: Message, session_svc: SessionService, scores_svc:
         await message.answer(t.NEED_AUTH, reply_markup=guest_keyboard())
         return
 
-    text = await scores_svc.render(user.id, result.exams)
+    text = await scores_svc.render(user.id, result.exams, account=account)
     await message.answer(text, parse_mode=SCORES_PARSE_MODE, reply_markup=refresh_scores_kb())
 
 
@@ -96,7 +96,7 @@ async def finish_login(
         return SignInStatus.BAD_CREDENTIALS
 
     await message.answer(t.AUTH_PENDING)
-    status = await auth_svc.complete_login(user.id)
+    status, exams = await auth_svc.complete_login(user.id)
 
     if status is SignInStatus.OK:
         await state.clear()
@@ -105,7 +105,11 @@ async def finish_login(
         account = await session_svc.get_account(user.id)
         if account:
             await send_region_hint(message, account.subject_code)
-        await send_scores(message, session_svc, scores_svc)
+        if exams:
+            text = await scores_svc.render(user.id, exams, account=account)
+            await message.answer(text, parse_mode=SCORES_PARSE_MODE, reply_markup=refresh_scores_kb())
+        else:
+            await send_scores(message, session_svc, scores_svc)
         return status
 
     await auth_svc.reset_captcha_step(user.id)

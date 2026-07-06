@@ -16,6 +16,7 @@ from egebot.bot.keyboards import (
 from egebot.content import uni_copy as t
 from egebot.content.university_catalog import scores_from_exams
 from egebot.domain.exam_snapshot import FetchScoresStatus
+from egebot.domain.models import TgAccount
 from egebot.domain.universities import FundingType, StudyField, UserScores
 from egebot.services.scores import ScoresService
 from egebot.services.session import SessionService
@@ -25,10 +26,10 @@ router = Router(name="universities")
 
 
 async def _load_portal_scores(
-    telegram_id: int,
+    account: TgAccount,
     scores_svc: ScoresService,
 ) -> UserScores | None:
-    result = await scores_svc.fetch_for_user(telegram_id)
+    result = await scores_svc.fetch_for_account(account)
     if result.status is not FetchScoresStatus.OK:
         return None
     scores = scores_from_exams(result.exams)
@@ -48,11 +49,12 @@ async def start_university_flow(
     await state.clear()
     await message.answer(t.UNI_INTRO)
 
-    if not await session_svc.is_logged_in(user.id):
+    account = await session_svc.get_account(user.id)
+    if account is None:
         await message.answer(t.UNI_NEED_AUTH, reply_markup=guest_keyboard())
         return
 
-    scores = await _load_portal_scores(user.id, scores_svc)
+    scores = await _load_portal_scores(account, scores_svc)
     if scores is None:
         await message.answer(t.UNI_SCORES_EMPTY, reply_markup=guest_keyboard())
         return
@@ -90,11 +92,13 @@ async def _show_results(
 
     data = await state.get_data()
     raw_scores = data.get("uni_scores")
-    if not raw_scores and await session_svc.is_logged_in(user.id):
-        scores = await _load_portal_scores(user.id, scores_svc)
-        if scores is not None:
-            raw_scores = scores.subjects
-            await state.update_data(uni_scores=raw_scores)
+    if not raw_scores:
+        account = await session_svc.get_account(user.id)
+        if account is not None:
+            scores = await _load_portal_scores(account, scores_svc)
+            if scores is not None:
+                raw_scores = scores.subjects
+                await state.update_data(uni_scores=raw_scores)
 
     if not raw_scores:
         await message.answer(t.UNI_SCORES_EMPTY)

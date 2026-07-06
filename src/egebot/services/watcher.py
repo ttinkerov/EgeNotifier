@@ -47,24 +47,34 @@ class ScoresWatcher:
             await asyncio.sleep(max(self._cfg.watcher_tick_sec, 30.0))
             return
 
+        concurrency = max(1, self._cfg.watcher_concurrency)
+        semaphore = asyncio.Semaphore(concurrency)
         portal_errors = 0
-        for account in subscribers:
-            failed = await self._check_account(account)
-            if failed:
-                portal_errors += 1
-                if portal_errors >= 3:
-                    logger.warning(
-                        "Portal unreachable, backing off {}s",
-                        self._cfg.watcher_backoff_sec,
-                    )
-                    await asyncio.sleep(self._cfg.watcher_backoff_sec)
-                    break
-            else:
-                portal_errors = 0
-            await asyncio.sleep(self._cfg.poll_cooldown_sec)
+        errors_lock = asyncio.Lock()
+
+        async def check_with_limit(account: TgAccount) -> bool:
+            async with semaphore:
+                failed = await self._check_account(account)
+                nonlocal portal_errors
+                async with errors_lock:
+                    if failed:
+                        portal_errors += 1
+                    else:
+                        portal_errors = 0
+                await asyncio.sleep(self._cfg.poll_cooldown_sec)
+                return failed
+
+        await asyncio.gather(*(check_with_limit(account) for account in subscribers))
+
+        if portal_errors >= 3:
+            logger.warning(
+                "Portal unreachable, backing off {}s",
+                self._cfg.watcher_backoff_sec,
+            )
+            await asyncio.sleep(self._cfg.watcher_backoff_sec)
 
     async def _check_account(self, account: TgAccount) -> bool:
-        result = await self._scores.fetch_for_user(account.telegram_id)
+        result = await self._scores.fetch_for_account(account)
         if result.status is FetchScoresStatus.PORTAL_DOWN:
             return True
         if result.status is not FetchScoresStatus.OK:
@@ -91,8 +101,10 @@ class ScoresWatcher:
         text = await self._scores.render(
             account.telegram_id,
             exams,
+            account=account,
             highlight_updates=True,
             persist_snapshot=False,
+            snapshot_hash=new_hash,
         )
         try:
             await self._bot.send_message(

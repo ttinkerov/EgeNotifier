@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     poll_cooldown_sec: float = 2.0
     watcher_tick_sec: float = 0.25
     watcher_backoff_sec: float = 12.0
+    watcher_concurrency: int = 3
 
     rustest_origin: str = "https://checkege.rustest.ru"
     rustest_ua: str = (

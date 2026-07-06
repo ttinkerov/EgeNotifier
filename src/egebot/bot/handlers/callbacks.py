@@ -34,7 +34,7 @@ async def expand_regions(callback: CallbackQuery) -> None:
             reply_markup=subjects_toggle(collapsed=False),
         )
     except TelegramBadRequest as exc:
-        log.debug("Region expand edit skipped: {}", exc)
+        logger.debug("Region expand edit skipped: {}", exc)
     await callback.answer()
 
 
@@ -49,7 +49,7 @@ async def collapse_regions(callback: CallbackQuery) -> None:
             reply_markup=subjects_toggle(collapsed=True),
         )
     except TelegramBadRequest as exc:
-        log.debug("Region collapse edit skipped: {}", exc)
+        logger.debug("Region collapse edit skipped: {}", exc)
     await callback.answer()
 
 
@@ -76,11 +76,13 @@ async def on_scores_refresh(
     if callback.message is None or callback.from_user is None:
         await callback.answer()
         return
-    if not await session_svc.is_logged_in(callback.from_user.id):
+
+    account = await session_svc.get_account(callback.from_user.id)
+    if account is None:
         await callback.answer(t.NEED_AUTH, show_alert=True)
         return
 
-    result = await scores_svc.fetch_for_user(callback.from_user.id)
+    result = await scores_svc.fetch_for_account(account)
     if result.status is FetchScoresStatus.PORTAL_DOWN:
         await callback.answer(t.PORTAL_DOWN, show_alert=True)
         return
@@ -91,7 +93,7 @@ async def on_scores_refresh(
         await callback.answer(t.NEED_AUTH, show_alert=True)
         return
 
-    text = await scores_svc.render(callback.from_user.id, result.exams)
+    text = await scores_svc.render(callback.from_user.id, result.exams, account=account)
     try:
         await callback.message.edit_text(
             text,
