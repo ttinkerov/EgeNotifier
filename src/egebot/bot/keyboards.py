@@ -101,6 +101,14 @@ def uni_regions() -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text="Екатеринбург", callback_data="uni:region:66"),
                 InlineKeyboardButton(text="Новосибирск", callback_data="uni:region:54"),
             ],
+            [
+                InlineKeyboardButton(text="Н. Новгород", callback_data="uni:region:52"),
+                InlineKeyboardButton(text="Томск", callback_data="uni:region:70"),
+            ],
+            [
+                InlineKeyboardButton(text="Краснодар", callback_data="uni:region:23"),
+                InlineKeyboardButton(text="Воронеж", callback_data="uni:region:36"),
+            ],
             [InlineKeyboardButton(text="🌍 Любой регион", callback_data="uni:region:any")],
         ],
     )

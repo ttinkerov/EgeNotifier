@@ -98,6 +98,51 @@ def test_basic_math_excluded_from_university_scores() -> None:
     assert scores.total_for(["russian", "foreign", "social"]) == 250
 
 
+def test_four_subjects_without_profile_math_find_programs() -> None:
+    svc = UniversitiesService()
+    scores = UserScores(subjects={"russian": 90, "foreign": 90, "social": 70})
+    economics = svc.find_best(
+        scores,
+        funding=FundingType.PAID,
+        region_code=None,
+        field=StudyField.ECONOMICS,
+    )
+    humanities = svc.find_best(
+        scores,
+        funding=FundingType.PAID,
+        region_code=None,
+        field=StudyField.HUMANITIES,
+    )
+    pedagogy = svc.find_best(
+        scores,
+        funding=FundingType.PAID,
+        region_code=None,
+        field=StudyField.PEDAGOGY,
+    )
+    assert economics
+    assert humanities
+    assert pedagogy
+    assert all(item.user_total == 250 for item in economics[:3])
+
+
+def test_four_profile_subjects_still_match_it() -> None:
+    svc = UniversitiesService()
+    scores = scores_from_exams([
+        _exam("Русский язык", 90),
+        _exam("Математика профильная", 85),
+        _exam("Информатика (КЕГЭ)", 90),
+        _exam("Обществознание", 70),
+    ])
+    results = svc.find_best(
+        scores,
+        funding=FundingType.PAID,
+        region_code=None,
+        field=StudyField.IT,
+    )
+    assert results
+    assert results[0].user_total == 265
+
+
 def test_typical_user_scores_find_programs() -> None:
     svc = UniversitiesService()
     scores = UserScores(subjects={"russian": 64, "math": 64, "informatics": 72})
