@@ -80,6 +80,22 @@ def test_find_it_programs_moscow_budget() -> None:
 def test_informatics_not_confused_with_math() -> None:
     assert normalize_subject_name("Информатика (КЕГЭ)") == "informatics"
     assert normalize_subject_name("Математика профильная") == "math"
+    assert normalize_subject_name("Математика базовая") is None
+
+
+def test_basic_math_excluded_from_university_scores() -> None:
+    exams = [
+        _exam("Русский язык", 90),
+        _exam("Математика базовая", 5),
+        _exam("Английский язык", 90),
+        _exam("Обществознание", 70),
+    ]
+    scores = scores_from_exams(exams)
+    assert scores.get("russian") == 90
+    assert scores.get("foreign") == 90
+    assert scores.get("social") == 70
+    assert "math" not in scores.subjects
+    assert scores.total_for(["russian", "foreign", "social"]) == 250
 
 
 def test_typical_user_scores_find_programs() -> None:

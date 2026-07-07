@@ -15,7 +15,7 @@ SCORES_PARSE_MODE = "HTML"
 
 
 def _mark_label(mark: int, subject: str) -> str:
-    if "Математика базовая" in subject:
+    if "математ" in subject.lower().replace("ё", "е") and "базов" in subject.lower().replace("ё", "е"):
         return ""
     n = mark % 10
     if mark % 100 in (11, 12, 13, 14):
@@ -28,7 +28,8 @@ def _mark_label(mark: int, subject: str) -> str:
 
 
 def _threshold_icon(mark: int, threshold: int, subject: str) -> str:
-    if "устн" in subject.lower():
+    lowered = subject.lower().replace("ё", "е")
+    if "устн" in lowered or ("математ" in lowered and "базов" in lowered):
         return ""
     return " ✅" if mark >= threshold else " ❗️"
 
@@ -93,7 +94,8 @@ class ScoresService:
                         f"{_threshold_icon(exam.mark, exam.min_mark, exam.subject)}"
                     )
                     mark_text = _format_mark(raw.strip(), spoiler=use_spoiler)
-                    total += exam.mark
+                    if not exam.is_grade_only:
+                        total += exam.mark
             elif exam.mark:
                 raw = (
                     f"{exam.mark}{_mark_label(exam.mark, exam.subject)}"

@@ -34,6 +34,7 @@ class RustestClient:
                 connector=aiohttp.TCPConnector(ssl=False, limit=10),
                 headers=self._cfg.rustest_headers,
                 timeout=aiohttp.ClientTimeout(total=25, connect=10, sock_read=20),
+                cookie_jar=aiohttp.DummyCookieJar(),
             )
 
     async def close(self) -> None:

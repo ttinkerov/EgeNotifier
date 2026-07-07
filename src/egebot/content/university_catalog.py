@@ -63,6 +63,8 @@ _MANUAL_ALIASES: dict[str, str] = {
 
 def normalize_subject_name(name: str) -> str | None:
     lowered = name.lower().replace("ё", "е")
+    if "базов" in lowered and "математ" in lowered:
+        return None
     for pattern, key in _SUBJECT_PATTERNS:
         if re.search(pattern, lowered):
             return key
@@ -75,7 +77,7 @@ def normalize_subject_name(name: str) -> str | None:
 def scores_from_exams(exams: list[ExamScore]) -> UserScores:
     subjects: dict[str, int] = {}
     for exam in exams:
-        if exam.is_composition or (not exam.has_result and not exam.mark):
+        if exam.is_grade_only or exam.is_composition or (not exam.has_result and not exam.mark):
             continue
         key = normalize_subject_name(exam.subject)
         if key is None:

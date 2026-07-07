@@ -25,6 +25,12 @@ class ExamScore(BaseModel):
 
     model_config = {"populate_by_name": True}
 
+    @property
+    def is_grade_only(self) -> bool:
+        """Базовая математика — оценка 2–5, не тестовый балл."""
+        lowered = self.subject.lower().replace("ё", "е")
+        return "математ" in lowered and "базов" in lowered
+
 
 class TgAccount(BaseModel):
     telegram_id: int
