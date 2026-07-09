@@ -6,6 +6,7 @@ KEY_UNIVERSITIES = "🎓 Подбор вузов"
 KEY_SETTINGS = "⚙️ Настройки"
 KEY_SIGN_IN = "🔐 Войти"
 KEY_SCORES = "📊 Мои баллы"
+KEY_HISTORY = "📈 История"
 KEY_FAQ = "❓ FAQ"
 KEY_CALENDAR = "📅 Календарь"
 KEY_EXIT = "🚪 Выйти"
@@ -24,7 +25,8 @@ def guest_keyboard() -> ReplyKeyboardMarkup:
 def member_keyboard() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text=KEY_SCORES), KeyboardButton(text=KEY_UNIVERSITIES)],
+            [KeyboardButton(text=KEY_SCORES), KeyboardButton(text=KEY_HISTORY)],
+            [KeyboardButton(text=KEY_UNIVERSITIES)],
             [KeyboardButton(text=KEY_SETTINGS), KeyboardButton(text=KEY_FAQ)],
             [KeyboardButton(text=KEY_CALENDAR)],
             [KeyboardButton(text=KEY_EXIT)],
@@ -43,7 +45,12 @@ def subjects_toggle(collapsed: bool = True) -> InlineKeyboardMarkup:
 
 def refresh_scores() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
-        inline_keyboard=[[InlineKeyboardButton(text="↻ Обновить", callback_data="scores:refresh")]],
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="↻ Обновить", callback_data="scores:refresh"),
+                InlineKeyboardButton(text="📈 История", callback_data="scores:history"),
+            ],
+        ],
     )
 
 

@@ -88,7 +88,11 @@ class ScoresWatcher:
             if has_published_scores(exams):
                 await self._notify(account, exams, new_hash)
             else:
-                await self._accounts.update_snapshot(account.telegram_id, new_hash)
+                await self._scores.sync_snapshot(
+                    account.telegram_id,
+                    exams,
+                    snapshot_hash=new_hash,
+                )
             return False
 
         if old_hash == new_hash:
@@ -98,11 +102,17 @@ class ScoresWatcher:
         return False
 
     async def _notify(self, account: TgAccount, exams: list[ExamScore], new_hash: str) -> None:
+        changes = await self._scores.sync_snapshot(
+            account.telegram_id,
+            exams,
+            snapshot_hash=new_hash,
+        )
         text = await self._scores.render(
             account.telegram_id,
             exams,
             account=account,
             highlight_updates=True,
+            changes=changes,
             persist_snapshot=False,
             snapshot_hash=new_hash,
         )
@@ -121,5 +131,4 @@ class ScoresWatcher:
             logger.warning("Cannot notify user {}: {}", account.telegram_id, exc)
             return
 
-        await self._accounts.update_snapshot(account.telegram_id, new_hash)
         logger.info("Score update sent to {}", account.telegram_id)

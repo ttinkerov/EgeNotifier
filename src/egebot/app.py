@@ -24,7 +24,7 @@ from egebot.services.settings import SettingsService
 from egebot.services.universities import UniversitiesService
 from egebot.services.watcher import ScoresWatcher
 from egebot.storage.database import Database, DatabaseError
-from egebot.storage.repositories import AccountRepository, AuthDraftRepository
+from egebot.storage.repositories import AccountRepository, AuthDraftRepository, ScoreHistoryRepository
 
 
 def _build_dispatcher(
@@ -76,7 +76,8 @@ async def _run() -> None:
 
     accounts = AccountRepository(db.pool)
     drafts = AuthDraftRepository(db.pool)
-    scores_svc = ScoresService(accounts, rustest)
+    history = ScoreHistoryRepository(db.pool)
+    scores_svc = ScoresService(accounts, history, rustest)
     session_svc = SessionService(accounts, drafts)
     auth_svc = AuthService(drafts, accounts, rustest, scores_svc)
     settings_svc = SettingsService(accounts)

@@ -4,12 +4,13 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
-from egebot.bot.handlers.helpers import end_session, send_scores, start_auth_flow
+from egebot.bot.handlers.helpers import end_session, send_history, send_scores, start_auth_flow
 from egebot.bot.handlers.settings import show_settings
 from egebot.bot.keyboards import (
     KEY_CALENDAR,
     KEY_EXIT,
     KEY_FAQ,
+    KEY_HISTORY,
     KEY_SCORES,
     KEY_SETTINGS,
     KEY_SIGN_IN,
@@ -52,6 +53,15 @@ async def tap_scores(
     scores_svc: ScoresService,
 ) -> None:
     await send_scores(message, session_svc, scores_svc)
+
+
+@router.message(F.text == KEY_HISTORY)
+async def tap_history(
+    message: Message,
+    session_svc: SessionService,
+    scores_svc: ScoresService,
+) -> None:
+    await send_history(message, session_svc, scores_svc)
 
 
 @router.message(F.text == KEY_SETTINGS)

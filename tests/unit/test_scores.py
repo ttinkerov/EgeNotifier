@@ -21,7 +21,7 @@ def _exam(subject: str, mark: int) -> ExamScore:
 
 @pytest.mark.asyncio
 async def test_render_sum_excludes_basic_math() -> None:
-    service = ScoresService(accounts=None, rustest=None)  # type: ignore[arg-type]
+    service = ScoresService(accounts=None, history=None, rustest=None)  # type: ignore[arg-type]
     exams = [
         _exam("Русский язык", 90),
         _exam("Математика базовая", 5),

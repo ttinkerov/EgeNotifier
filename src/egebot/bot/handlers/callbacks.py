@@ -8,6 +8,7 @@ from loguru import logger
 
 from egebot.bot.handlers.helpers import (
     recover_captcha_step,
+    send_history,
     send_scores,
     start_auth_flow,
 )
@@ -103,6 +104,38 @@ async def on_scores_refresh(
         await callback.answer("Обновлено")
     except TelegramBadRequest:
         await callback.answer(t.SCORES_FRESH)
+
+
+@router.callback_query(F.data == "scores:history")
+async def on_scores_history(
+    callback: CallbackQuery,
+    session_svc: SessionService,
+    scores_svc: ScoresService,
+) -> None:
+    if callback.message is None or callback.from_user is None:
+        await callback.answer()
+        return
+
+    account = await session_svc.get_account(callback.from_user.id)
+    if account is None:
+        await callback.answer(t.NEED_AUTH, show_alert=True)
+        return
+
+    text = await scores_svc.render_history(callback.from_user.id)
+    try:
+        await callback.message.edit_text(
+            text,
+            parse_mode=SCORES_PARSE_MODE,
+            reply_markup=refresh_scores_kb(),
+        )
+        await callback.answer()
+    except TelegramBadRequest:
+        await callback.message.answer(
+            text,
+            parse_mode=SCORES_PARSE_MODE,
+            reply_markup=refresh_scores_kb(),
+        )
+        await callback.answer()
 
 
 @router.callback_query(F.data == "auth:retry")

@@ -84,6 +84,20 @@ async def send_scores(message: Message, session_svc: SessionService, scores_svc:
     await message.answer(text, parse_mode=SCORES_PARSE_MODE, reply_markup=refresh_scores_kb())
 
 
+async def send_history(message: Message, session_svc: SessionService, scores_svc: ScoresService) -> None:
+    user = message.from_user
+    if user is None:
+        return
+
+    account = await session_svc.get_account(user.id)
+    if account is None:
+        await message.answer(t.NEED_AUTH_HISTORY, reply_markup=guest_keyboard())
+        return
+
+    text = await scores_svc.render_history(user.id)
+    await message.answer(text, parse_mode=SCORES_PARSE_MODE, reply_markup=refresh_scores_kb())
+
+
 async def finish_login(
     message: Message,
     state: FSMContext,

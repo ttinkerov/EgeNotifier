@@ -5,7 +5,7 @@ from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
-from egebot.bot.handlers.helpers import end_session, send_scores, start_auth_flow
+from egebot.bot.handlers.helpers import end_session, send_history, send_scores, start_auth_flow
 from egebot.bot.keyboards import guest_keyboard, member_keyboard
 from egebot.config import Settings
 from egebot.content import ui_copy as t
@@ -39,6 +39,15 @@ async def on_scores(
     scores_svc: ScoresService,
 ) -> None:
     await send_scores(message, session_svc, scores_svc)
+
+
+@router.message(Command("history"))
+async def on_history(
+    message: Message,
+    session_svc: SessionService,
+    scores_svc: ScoresService,
+) -> None:
+    await send_history(message, session_svc, scores_svc)
 
 
 @router.message(Command("help"))
