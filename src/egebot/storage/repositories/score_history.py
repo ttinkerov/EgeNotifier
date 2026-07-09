@@ -124,3 +124,7 @@ class ScoreHistoryRepository:
             "DELETE FROM score_snapshots WHERE telegram_id = $1",
             telegram_id,
         )
+
+    async def count_events(self) -> int:
+        value = await self._pool.fetchval("SELECT COUNT(*)::int FROM score_change_events")
+        return int(value or 0)

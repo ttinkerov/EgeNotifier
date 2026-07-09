@@ -63,3 +63,7 @@ class AuthDraftRepository:
             telegram_id,
         )
         return result.endswith("1")
+
+    async def count(self) -> int:
+        value = await self._pool.fetchval("SELECT COUNT(*)::int FROM auth_drafts")
+        return int(value or 0)

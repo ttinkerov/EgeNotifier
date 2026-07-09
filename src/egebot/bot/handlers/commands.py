@@ -7,7 +7,6 @@ from aiogram.types import Message
 
 from egebot.bot.handlers.helpers import end_session, send_history, send_scores, start_auth_flow
 from egebot.bot.keyboards import guest_keyboard, member_keyboard
-from egebot.config import Settings
 from egebot.content import ui_copy as t
 from egebot.services.scores import ScoresService
 from egebot.services.session import SessionService
@@ -53,9 +52,3 @@ async def on_history(
 @router.message(Command("help"))
 async def on_help(message: Message) -> None:
     await message.answer(t.FAQ)
-
-
-@router.message(Command("version"))
-async def on_version(message: Message, settings: Settings) -> None:
-    if message.from_user and message.from_user.id in settings.admin_ids:
-        await message.answer(f"EgeNotifier {settings.app_version}")

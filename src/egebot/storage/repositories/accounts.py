@@ -62,6 +62,26 @@ class AccountRepository:
         )
         return [TgAccount.model_validate(dict(row)) for row in rows]
 
+    async def list_ids(self) -> list[int]:
+        rows = await self._pool.fetch(
+            "SELECT telegram_id FROM tg_accounts ORDER BY linked_at"
+        )
+        return [int(row["telegram_id"]) for row in rows]
+
+    async def count_stats(self) -> dict[str, int]:
+        row = await self._pool.fetchrow(
+            """
+            SELECT
+                COUNT(*)::int AS total_users,
+                COUNT(*) FILTER (WHERE snapshot_hash IS NOT NULL)::int AS with_scores,
+                COUNT(*) FILTER (WHERE alerts_enabled)::int AS alerts_enabled,
+                COUNT(*) FILTER (WHERE spoiler_scores)::int AS spoiler_enabled
+            FROM tg_accounts
+            """
+        )
+        assert row is not None
+        return dict(row)
+
     async def set_alerts_enabled(self, telegram_id: int, enabled: bool) -> None:
         await self._pool.execute(
             "UPDATE tg_accounts SET alerts_enabled = $2 WHERE telegram_id = $1",

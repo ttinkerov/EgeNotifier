@@ -10,6 +10,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from loguru import logger
 
 from egebot.bot.handlers import auth, callbacks, commands, fallback, menu, universities
+from egebot.bot.handlers import admin as admin_handlers
 from egebot.bot.handlers import settings as settings_handlers
 from egebot.bot.middlewares import ErrorMiddleware
 from egebot.bot.middlewares.auth_state import RestoreAuthStateMiddleware
@@ -17,6 +18,7 @@ from egebot.bot.middlewares.deps import DependenciesMiddleware
 from egebot.config import get_settings
 from egebot.core.rustest import RustestClient
 from egebot.logging_setup import setup_logging
+from egebot.services.admin import AdminService
 from egebot.services.auth import AuthService
 from egebot.services.scores import ScoresService
 from egebot.services.session import SessionService
@@ -35,6 +37,7 @@ def _build_dispatcher(
     scores_svc: ScoresService,
     settings_svc: SettingsService,
     uni_svc: UniversitiesService,
+    admin_svc: AdminService,
     drafts: AuthDraftRepository,
 ) -> Dispatcher:
     dp = Dispatcher(storage=MemoryStorage())
@@ -47,10 +50,12 @@ def _build_dispatcher(
             scores_svc=scores_svc,
             settings_svc=settings_svc,
             uni_svc=uni_svc,
+            admin_svc=admin_svc,
         )
     )
     dp.update.middleware(RestoreAuthStateMiddleware(drafts))
     dp.include_router(commands.router)
+    dp.include_router(admin_handlers.router)
     dp.include_router(menu.router)
     dp.include_router(universities.router)
     dp.include_router(settings_handlers.router)
@@ -82,6 +87,7 @@ async def _run() -> None:
     auth_svc = AuthService(drafts, accounts, rustest, scores_svc)
     settings_svc = SettingsService(accounts)
     uni_svc = UniversitiesService()
+    admin_svc = AdminService(settings, accounts, drafts, history)
 
     session = AiohttpSession(proxy=settings.proxy_url) if settings.proxy_url else None
     bot = Bot(
@@ -96,11 +102,12 @@ async def _run() -> None:
         scores_svc=scores_svc,
         settings_svc=settings_svc,
         uni_svc=uni_svc,
+        admin_svc=admin_svc,
         drafts=drafts,
     )
 
     logger.info("EgeNotifier {} is up", settings.app_version)
-    watcher = ScoresWatcher(bot, settings, accounts, scores_svc)
+    watcher = ScoresWatcher(bot, settings, accounts, scores_svc, admin_svc)
     watcher_task = asyncio.create_task(watcher.run())
     try:
         await dp.start_polling(bot)

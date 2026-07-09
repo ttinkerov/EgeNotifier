@@ -6,6 +6,7 @@ from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
 
 from egebot.config import Settings
+from egebot.services.admin import AdminService
 from egebot.services.auth import AuthService
 from egebot.services.scores import ScoresService
 from egebot.services.session import SessionService
@@ -22,6 +23,7 @@ class DependenciesMiddleware(BaseMiddleware):
         scores_svc: ScoresService,
         settings_svc: SettingsService,
         uni_svc: UniversitiesService,
+        admin_svc: AdminService,
     ) -> None:
         self._settings = settings
         self._session_svc = session_svc
@@ -29,6 +31,7 @@ class DependenciesMiddleware(BaseMiddleware):
         self._scores_svc = scores_svc
         self._settings_svc = settings_svc
         self._uni_svc = uni_svc
+        self._admin_svc = admin_svc
 
     async def __call__(
         self,
@@ -42,4 +45,5 @@ class DependenciesMiddleware(BaseMiddleware):
         data["scores_svc"] = self._scores_svc
         data["settings_svc"] = self._settings_svc
         data["uni_svc"] = self._uni_svc
+        data["admin_svc"] = self._admin_svc
         return await handler(event, data)

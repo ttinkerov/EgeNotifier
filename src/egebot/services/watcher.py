@@ -14,6 +14,7 @@ from egebot.domain.exam_snapshot import (
     has_published_scores,
 )
 from egebot.domain.models import ExamScore, TgAccount
+from egebot.services.admin import AdminService
 from egebot.services.scores import SCORES_PARSE_MODE, ScoresService
 from egebot.storage.repositories.accounts import AccountRepository
 
@@ -25,11 +26,14 @@ class ScoresWatcher:
         settings: Settings,
         accounts: AccountRepository,
         scores_svc: ScoresService,
+        admin_svc: AdminService,
     ) -> None:
         self._bot = bot
         self._cfg = settings
         self._accounts = accounts
         self._scores = scores_svc
+        self._admin = admin_svc
+        self._portal_down_notified = False
 
     async def run(self) -> None:
         logger.info("Scores watcher started")
@@ -67,11 +71,17 @@ class ScoresWatcher:
         await asyncio.gather(*(check_with_limit(account) for account in subscribers))
 
         if portal_errors >= 3:
+            if not self._portal_down_notified:
+                await self._admin.notify_portal_down(self._bot, portal_errors)
+                self._portal_down_notified = True
             logger.warning(
                 "Portal unreachable, backing off {}s",
                 self._cfg.watcher_backoff_sec,
             )
             await asyncio.sleep(self._cfg.watcher_backoff_sec)
+        elif self._portal_down_notified:
+            await self._admin.notify_portal_recovered(self._bot)
+            self._portal_down_notified = False
 
     async def _check_account(self, account: TgAccount) -> bool:
         result = await self._scores.fetch_for_account(account)

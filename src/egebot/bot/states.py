@@ -6,3 +6,7 @@ class AuthFlow(StatesGroup):
     region = State()
     document = State()
     captcha = State()
+
+
+class AdminFlow(StatesGroup):
+    broadcast = State()
