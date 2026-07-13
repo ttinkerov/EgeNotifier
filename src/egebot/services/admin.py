@@ -28,6 +28,10 @@ class AdminService:
     def is_admin(self, telegram_id: int) -> bool:
         return telegram_id in self._settings.admin_ids
 
+    @property
+    def app_version(self) -> str:
+        return self._settings.app_version
+
     async def collect_stats(self) -> AdminStats:
         account_stats = await self._accounts.count_stats()
         return AdminStats(
@@ -56,7 +60,7 @@ class AdminService:
 
         for telegram_id in recipients:
             try:
-                await bot.send_message(telegram_id, text)
+                await bot.send_message(telegram_id, text, parse_mode=None)
                 result.sent += 1
             except TelegramForbiddenError:
                 result.blocked += 1

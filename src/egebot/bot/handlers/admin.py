@@ -26,6 +26,11 @@ async def cmd_broadcast(message: Message, state: FSMContext) -> None:
     await message.answer(t.ADMIN_BROADCAST_ASK)
 
 
+@router.message(Command("version"))
+async def cmd_version(message: Message, admin_svc: AdminService) -> None:
+    await message.answer(f"EgeNotifier `{admin_svc.app_version}`")
+
+
 @router.message(Command("cancel"), StateFilter(AdminFlow.broadcast))
 async def cmd_broadcast_cancel(message: Message, state: FSMContext) -> None:
     await state.clear()
@@ -43,9 +48,3 @@ async def on_broadcast_text(message: Message, state: FSMContext, bot: Bot, admin
     result = await admin_svc.broadcast(bot, message.text)
     await state.clear()
     await message.answer(admin_svc.format_broadcast_result(result))
-
-
-@router.message(Command("version"))
-async def cmd_version(message: Message, admin_svc: AdminService) -> None:
-    stats = await admin_svc.collect_stats()
-    await message.answer(admin_svc.format_stats(stats))

@@ -92,7 +92,8 @@ class AuthService:
                 session_token=token,
             )
         )
-        exams = await self._rustest.fetch_scores(token)
+        fetch = await self._rustest.fetch_scores(token)
+        exams = fetch.exams if fetch.is_ok else None
         if exams:
             await self._scores.seed_snapshot(telegram_id, exams)
         await self._drafts.delete(telegram_id)

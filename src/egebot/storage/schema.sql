@@ -44,25 +44,3 @@ CREATE TABLE IF NOT EXISTS score_change_events (
 
 CREATE INDEX IF NOT EXISTS idx_score_events_user_time
     ON score_change_events (telegram_id, recorded_at DESC);
-
-CREATE TABLE IF NOT EXISTS score_snapshots (
-    telegram_id     BIGINT PRIMARY KEY REFERENCES tg_accounts (telegram_id) ON DELETE CASCADE,
-    snapshot_hash   TEXT NOT NULL,
-    payload         JSONB NOT NULL,
-    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS score_change_events (
-    id              BIGSERIAL PRIMARY KEY,
-    telegram_id     BIGINT NOT NULL REFERENCES tg_accounts (telegram_id) ON DELETE CASCADE,
-    exam_id         INTEGER NOT NULL,
-    subject         TEXT NOT NULL,
-    old_status      TEXT NOT NULL,
-    new_status      TEXT NOT NULL,
-    old_mark        SMALLINT,
-    new_mark        SMALLINT,
-    recorded_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_score_events_user_time
-    ON score_change_events (telegram_id, recorded_at DESC);

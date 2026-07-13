@@ -26,7 +26,7 @@
 ```bash
 git clone https://github.com/ttinkerov/EgeNotifier.git
 cd EgeNotifier
-cp .env.example .env
+cp .env.default .env
 ```
 
 Заполни `.env` (токен бота, PostgreSQL, свой Telegram ID).

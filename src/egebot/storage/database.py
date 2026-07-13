@@ -29,7 +29,7 @@ class Database:
             "Connecting to PostgreSQL at {}:{}/{}…",
             self._settings.db_addr,
             self._settings.db_port,
-            self._settings.db_name,
+            self._settings.db_name or "?",
         )
 
         await self._ensure_database_exists()
@@ -48,7 +48,21 @@ class Database:
         logger.info("Database ready")
 
     async def _ensure_database_exists(self) -> None:
-        conn = await asyncpg.connect(self._settings.admin_dsn)
+        if not self._settings.can_auto_create_database:
+            logger.info(
+                "Skipping auto-create database (set DB_NAME/DB_USER or a full DATABASE_URL)"
+            )
+            return
+
+        try:
+            conn = await asyncpg.connect(self._settings.admin_dsn)
+        except (OSError, asyncpg.PostgresError) as exc:
+            logger.warning(
+                "Cannot connect to maintenance DB to auto-create database: {}",
+                exc,
+            )
+            return
+
         try:
             exists = await conn.fetchval(
                 "SELECT 1 FROM pg_database WHERE datname = $1",
@@ -88,7 +102,7 @@ class Database:
     def _hint(exc: BaseException) -> str:
         base = (
             f"Не удалось подключиться к PostgreSQL.\n"
-            f"Проверь DB_USER, DB_PASS, DB_ADDR, DB_PORT в .env.\n"
+            f"Проверь DB_USER, DB_PASS, DB_ADDR, DB_PORT или DATABASE_URL в .env.\n"
             f"Ошибка: {exc}"
         )
         if sys.platform == "win32":

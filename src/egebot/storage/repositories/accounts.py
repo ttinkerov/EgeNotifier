@@ -40,6 +40,8 @@ class AccountRepository:
             ON CONFLICT (telegram_id) DO UPDATE SET
                 subject_code = EXCLUDED.subject_code,
                 session_token = EXCLUDED.session_token,
+                alerts_enabled = EXCLUDED.alerts_enabled,
+                snapshot_hash = EXCLUDED.snapshot_hash,
                 linked_at = NOW()
             """,
             account.telegram_id,

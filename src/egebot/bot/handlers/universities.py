@@ -106,12 +106,34 @@ async def _show_results(
 
     scores = UserScores(subjects=raw_scores)
     funding_raw = data.get("uni_funding")
-    funding = None if funding_raw in (None, "any") else FundingType(funding_raw)
+    funding = None
+    if funding_raw not in (None, "any"):
+        try:
+            funding = FundingType(funding_raw)
+        except ValueError:
+            await message.answer(t.UNI_ASK_FUNDING, reply_markup=uni_funding())
+            return
 
     region_raw = data.get("uni_region")
-    region_code = None if region_raw in (None, "any", 0) else int(region_raw)
+    region_code = None
+    if region_raw not in (None, "any", 0, "0"):
+        try:
+            region_code = int(region_raw)
+        except (TypeError, ValueError):
+            await message.answer(t.UNI_ASK_REGION, reply_markup=uni_regions())
+            return
 
-    field = StudyField(data["uni_field"])
+    field_raw = data.get("uni_field")
+    if not field_raw:
+        await message.answer(t.UNI_ASK_FIELD, reply_markup=uni_fields())
+        return
+
+    try:
+        field = StudyField(field_raw)
+    except ValueError:
+        await message.answer(t.UNI_ASK_FIELD, reply_markup=uni_fields())
+        return
+
     results = uni_svc.find_best(
         scores,
         funding=funding,

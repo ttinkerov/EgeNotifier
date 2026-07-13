@@ -76,6 +76,10 @@ async def send_scores(message: Message, session_svc: SessionService, scores_svc:
     if result.status is FetchScoresStatus.EMPTY:
         await message.answer(t.NO_SCORES_YET, reply_markup=refresh_scores_kb())
         return
+    if result.status is FetchScoresStatus.UNAUTHORIZED:
+        await session_svc.clear(user.id)
+        await message.answer(t.SESSION_EXPIRED, reply_markup=guest_keyboard())
+        return
     if result.status is not FetchScoresStatus.OK:
         await message.answer(t.NEED_AUTH, reply_markup=guest_keyboard())
         return

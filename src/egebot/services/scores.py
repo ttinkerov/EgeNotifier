@@ -119,12 +119,7 @@ class ScoresService:
         return await self.fetch_for_account(account)
 
     async def fetch_for_account(self, account: TgAccount) -> FetchScoresResult:
-        exams = await self._rustest.fetch_scores(account.session_token)
-        if exams is None:
-            return FetchScoresResult.portal_down()
-        if not exams:
-            return FetchScoresResult.empty()
-        return FetchScoresResult.ok(exams)
+        return await self._rustest.fetch_scores(account.session_token)
 
     async def sync_snapshot(
         self,

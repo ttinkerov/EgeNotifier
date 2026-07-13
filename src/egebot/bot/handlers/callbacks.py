@@ -90,6 +90,14 @@ async def on_scores_refresh(
     if result.status is FetchScoresStatus.EMPTY:
         await callback.answer("Пока пусто")
         return
+    if result.status is FetchScoresStatus.UNAUTHORIZED:
+        await session_svc.clear(callback.from_user.id)
+        await callback.answer(t.SESSION_EXPIRED, show_alert=True)
+        try:
+            await callback.message.answer(t.SESSION_EXPIRED, reply_markup=guest_keyboard())
+        except TelegramBadRequest:
+            pass
+        return
     if result.status is not FetchScoresStatus.OK:
         await callback.answer(t.NEED_AUTH, show_alert=True)
         return

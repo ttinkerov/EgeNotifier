@@ -20,6 +20,10 @@ class FetchScoresResult:
     status: FetchScoresStatus
     exams: list[ExamScore]
 
+    @property
+    def is_ok(self) -> bool:
+        return self.status is FetchScoresStatus.OK
+
     @classmethod
     def unauthorized(cls) -> FetchScoresResult:
         return cls(FetchScoresStatus.UNAUTHORIZED, [])

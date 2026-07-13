@@ -6,8 +6,9 @@ from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from loguru import logger
 
-from egebot.bot.keyboards import refresh_scores as refresh_scores_kb
+from egebot.bot.keyboards import guest_keyboard, refresh_scores as refresh_scores_kb
 from egebot.config import Settings
+from egebot.content import ui_copy as t
 from egebot.domain.exam_snapshot import (
     FetchScoresStatus,
     compute_snapshot_hash,
@@ -52,34 +53,33 @@ class ScoresWatcher:
             return
 
         concurrency = max(1, self._cfg.watcher_concurrency)
-        semaphore = asyncio.Semaphore(concurrency)
-        portal_errors = 0
-        errors_lock = asyncio.Lock()
+        portal_failures = 0
+        portal_checks = 0
 
-        async def check_with_limit(account: TgAccount) -> bool:
-            async with semaphore:
-                failed = await self._check_account(account)
-                nonlocal portal_errors
-                async with errors_lock:
-                    if failed:
-                        portal_errors += 1
-                    else:
-                        portal_errors = 0
-                await asyncio.sleep(self._cfg.poll_cooldown_sec)
-                return failed
+        for offset in range(0, len(subscribers), concurrency):
+            batch = subscribers[offset : offset + concurrency]
+            outcomes = await asyncio.gather(
+                *(self._check_account(account) for account in batch)
+            )
+            for failed in outcomes:
+                portal_checks += 1
+                if failed:
+                    portal_failures += 1
+            await asyncio.sleep(self._cfg.poll_cooldown_sec)
 
-        await asyncio.gather(*(check_with_limit(account) for account in subscribers))
-
-        if portal_errors >= 3:
+        if (
+            portal_checks >= 1
+            and portal_failures == portal_checks
+        ):
             if not self._portal_down_notified:
-                await self._admin.notify_portal_down(self._bot, portal_errors)
+                await self._admin.notify_portal_down(self._bot, portal_failures)
                 self._portal_down_notified = True
             logger.warning(
                 "Portal unreachable, backing off {}s",
                 self._cfg.watcher_backoff_sec,
             )
             await asyncio.sleep(self._cfg.watcher_backoff_sec)
-        elif self._portal_down_notified:
+        elif portal_failures == 0 and self._portal_down_notified:
             await self._admin.notify_portal_recovered(self._bot)
             self._portal_down_notified = False
 
@@ -87,6 +87,9 @@ class ScoresWatcher:
         result = await self._scores.fetch_for_account(account)
         if result.status is FetchScoresStatus.PORTAL_DOWN:
             return True
+        if result.status is FetchScoresStatus.UNAUTHORIZED:
+            await self._handle_expired_session(account)
+            return False
         if result.status is not FetchScoresStatus.OK:
             return False
 
@@ -110,6 +113,20 @@ class ScoresWatcher:
 
         await self._notify(account, exams, new_hash)
         return False
+
+    async def _handle_expired_session(self, account: TgAccount) -> None:
+        logger.info("Session expired for user {}, removing account", account.telegram_id)
+        await self._accounts.delete(account.telegram_id)
+        try:
+            await self._bot.send_message(
+                account.telegram_id,
+                t.SESSION_EXPIRED,
+                reply_markup=guest_keyboard(),
+            )
+        except TelegramForbiddenError:
+            logger.info("User {} blocked the bot after session expiry", account.telegram_id)
+        except TelegramBadRequest as exc:
+            logger.warning("Cannot notify expired session for {}: {}", account.telegram_id, exc)
 
     async def _notify(self, account: TgAccount, exams: list[ExamScore], new_hash: str) -> None:
         changes = await self._scores.sync_snapshot(

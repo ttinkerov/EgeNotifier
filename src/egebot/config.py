@@ -1,6 +1,6 @@
 from functools import lru_cache
 from typing import Self
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlparse, unquote
 
 from egebot.__version__ import __version__
 from pydantic import Field, field_validator, model_validator
@@ -28,8 +28,8 @@ class Settings(BaseSettings):
     app_version: str = __version__
 
     poll_cooldown_sec: float = 2.0
-    watcher_tick_sec: float = 0.25
-    watcher_backoff_sec: float = 12.0
+    watcher_tick_sec: float = 5.0
+    watcher_backoff_sec: float = 30.0
     watcher_concurrency: int = 3
 
     rustest_origin: str = "https://checkege.rustest.ru"
@@ -53,6 +53,7 @@ class Settings(BaseSettings):
             self.db_addr = "127.0.0.1"
 
         if self.database_url:
+            self._hydrate_from_database_url()
             return self
 
         required = {
@@ -73,16 +74,37 @@ class Settings(BaseSettings):
         )
         return self
 
+    def _hydrate_from_database_url(self) -> None:
+        """Fill db_* fields from DATABASE_URL when discrete vars are omitted."""
+        assert self.database_url is not None
+        parsed = urlparse(self.database_url)
+        if not self.db_user and parsed.username:
+            self.db_user = unquote(parsed.username)
+        if not self.db_pass and parsed.password is not None:
+            self.db_pass = unquote(parsed.password)
+        if parsed.hostname:
+            self.db_addr = "127.0.0.1" if parsed.hostname == "localhost" else parsed.hostname
+        if parsed.port:
+            self.db_port = parsed.port
+        path_name = (parsed.path or "").lstrip("/")
+        if path_name and not self.db_name:
+            self.db_name = path_name.split("/")[0] or None
+
+    @property
+    def can_auto_create_database(self) -> bool:
+        return bool(self.db_user and self.db_name)
+
     @property
     def admin_dsn(self) -> str:
-        user = quote_plus(self.db_user or "")  # type: ignore[arg-type]
-        password = quote_plus(self.db_pass or "")  # type: ignore[arg-type]
+        user = quote_plus(self.db_user or "")
+        password = quote_plus(self.db_pass or "")
         return f"postgresql://{user}:{password}@{self.db_addr}:{self.db_port}/postgres"
 
     @property
     def dsn(self) -> str:
         assert self.database_url is not None
         return self.database_url
+
     @property
     def rustest_scores_endpoint(self) -> str:
         return f"{self.rustest_origin}/api/exam"
