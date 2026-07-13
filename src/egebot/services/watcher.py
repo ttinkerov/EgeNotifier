@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import random
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
@@ -55,11 +56,12 @@ class ScoresWatcher:
         concurrency = max(1, self._cfg.watcher_concurrency)
         portal_failures = 0
         portal_checks = 0
+        jitter = max(0.0, self._cfg.watcher_jitter_sec)
 
         for offset in range(0, len(subscribers), concurrency):
             batch = subscribers[offset : offset + concurrency]
             outcomes = await asyncio.gather(
-                *(self._check_account(account) for account in batch)
+                *(self._check_account_with_jitter(account, jitter) for account in batch)
             )
             for failed in outcomes:
                 portal_checks += 1
@@ -67,10 +69,7 @@ class ScoresWatcher:
                     portal_failures += 1
             await asyncio.sleep(self._cfg.poll_cooldown_sec)
 
-        if (
-            portal_checks >= 1
-            and portal_failures == portal_checks
-        ):
+        if portal_checks >= 1 and portal_failures == portal_checks:
             if not self._portal_down_notified:
                 await self._admin.notify_portal_down(self._bot, portal_failures)
                 self._portal_down_notified = True
@@ -82,6 +81,11 @@ class ScoresWatcher:
         elif portal_failures == 0 and self._portal_down_notified:
             await self._admin.notify_portal_recovered(self._bot)
             self._portal_down_notified = False
+
+    async def _check_account_with_jitter(self, account: TgAccount, jitter: float) -> bool:
+        if jitter > 0:
+            await asyncio.sleep(random.uniform(0.0, jitter))
+        return await self._check_account(account)
 
     async def _check_account(self, account: TgAccount) -> bool:
         result = await self._scores.fetch_for_account(account)

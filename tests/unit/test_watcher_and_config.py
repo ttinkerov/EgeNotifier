@@ -68,6 +68,7 @@ async def test_watcher_portal_down_requires_full_batch_failure() -> None:
         watcher_concurrency=2,
         poll_cooldown_sec=0,
         watcher_backoff_sec=0,
+        watcher_jitter_sec=0,
     )
     accounts = AsyncMock()
     scores_svc = AsyncMock()
@@ -107,6 +108,7 @@ async def test_watcher_portal_down_when_all_fail() -> None:
         watcher_concurrency=3,
         poll_cooldown_sec=0,
         watcher_backoff_sec=0,
+        watcher_jitter_sec=0,
     )
     accounts = AsyncMock()
     scores_svc = AsyncMock()
@@ -123,6 +125,37 @@ async def test_watcher_portal_down_when_all_fail() -> None:
     await watcher._scan_all()
 
     admin_svc.notify_portal_down.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_watcher_applies_jitter(monkeypatch: pytest.MonkeyPatch) -> None:
+    sleeps: list[float] = []
+
+    async def fake_sleep(delay: float) -> None:
+        sleeps.append(delay)
+
+    monkeypatch.setattr("egebot.services.watcher.asyncio.sleep", fake_sleep)
+    monkeypatch.setattr("egebot.services.watcher.random.uniform", lambda a, b: 0.42)
+
+    bot = AsyncMock()
+    settings = Settings(
+        TG_API_TOKEN="1:test",
+        DB_NAME="egebot",
+        DB_USER="postgres",
+        DB_PASS="postgres",
+        watcher_jitter_sec=1.5,
+        poll_cooldown_sec=0,
+    )
+    accounts = AsyncMock()
+    scores_svc = AsyncMock()
+    admin_svc = AsyncMock()
+    account = TgAccount(telegram_id=1, subject_code=77, session_token="t")
+    scores_svc.fetch_for_account.return_value = FetchScoresResult.empty()
+
+    watcher = ScoresWatcher(bot, settings, accounts, scores_svc, admin_svc)
+    await watcher._check_account_with_jitter(account, jitter=1.5)
+
+    assert sleeps == [0.42]
 
 
 @pytest.mark.asyncio

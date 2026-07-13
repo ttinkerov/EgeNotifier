@@ -6,6 +6,9 @@ aiohttp>=3.9,<4
 # Database
 asyncpg>=0.29,<1
 
+# Security
+cryptography>=42,<46
+
 # Config & validation
 pydantic>=2.7,<3
 pydantic-settings>=2.3,<3

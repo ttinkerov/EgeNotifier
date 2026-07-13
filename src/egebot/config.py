@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     admin_ids: list[int] = Field(default_factory=list, alias="ADMIN_CHAT_IDS")
     proxy_url: str | None = Field(alias="PROXY_URL", default=None)
     log_level: str = Field(alias="LOG_LEVEL", default="INFO")
+    data_encryption_key: str | None = Field(default=None, alias="DATA_ENCRYPTION_KEY")
 
     app_version: str = __version__
 
@@ -31,6 +32,7 @@ class Settings(BaseSettings):
     watcher_tick_sec: float = 5.0
     watcher_backoff_sec: float = 30.0
     watcher_concurrency: int = 3
+    watcher_jitter_sec: float = 1.5
 
     rustest_origin: str = "https://checkege.rustest.ru"
     rustest_ua: str = (

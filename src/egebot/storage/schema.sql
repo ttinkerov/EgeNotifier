@@ -44,3 +44,14 @@ CREATE TABLE IF NOT EXISTS score_change_events (
 
 CREATE INDEX IF NOT EXISTS idx_score_events_user_time
     ON score_change_events (telegram_id, recorded_at DESC);
+
+CREATE TABLE IF NOT EXISTS fsm_storage (
+    bot_id      BIGINT NOT NULL,
+    chat_id     BIGINT NOT NULL,
+    user_id     BIGINT NOT NULL,
+    destiny     TEXT NOT NULL DEFAULT 'default',
+    state       TEXT,
+    data        JSONB NOT NULL DEFAULT '{}'::jsonb,
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (bot_id, chat_id, user_id, destiny)
+);

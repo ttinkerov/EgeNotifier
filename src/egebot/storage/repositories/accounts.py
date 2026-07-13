@@ -3,11 +3,18 @@ from __future__ import annotations
 import asyncpg
 
 from egebot.domain.models import TgAccount
+from egebot.security.crypto import FieldEncryptor
 
 
 class AccountRepository:
-    def __init__(self, pool: asyncpg.Pool) -> None:
+    def __init__(self, pool: asyncpg.Pool, encryptor: FieldEncryptor | None = None) -> None:
         self._pool = pool
+        self._crypto = encryptor or FieldEncryptor.noop()
+
+    def _to_model(self, row: asyncpg.Record) -> TgAccount:
+        data = dict(row)
+        data["session_token"] = self._crypto.decrypt(data["session_token"])
+        return TgAccount.model_validate(data)
 
     async def get(self, telegram_id: int) -> TgAccount | None:
         row = await self._pool.fetchrow(
@@ -20,7 +27,7 @@ class AccountRepository:
         )
         if row is None:
             return None
-        return TgAccount.model_validate(dict(row))
+        return self._to_model(row)
 
     async def exists(self, telegram_id: int) -> bool:
         val = await self._pool.fetchval(
@@ -30,6 +37,7 @@ class AccountRepository:
         return val is not None
 
     async def save(self, account: TgAccount) -> None:
+        token = self._crypto.encrypt(account.session_token) or account.session_token
         await self._pool.execute(
             """
             INSERT INTO tg_accounts (
@@ -46,7 +54,7 @@ class AccountRepository:
             """,
             account.telegram_id,
             account.subject_code,
-            account.session_token,
+            token,
             account.alerts_enabled,
             account.spoiler_scores,
             account.snapshot_hash,
@@ -62,7 +70,7 @@ class AccountRepository:
             ORDER BY linked_at
             """
         )
-        return [TgAccount.model_validate(dict(row)) for row in rows]
+        return [self._to_model(row) for row in rows]
 
     async def list_ids(self) -> list[int]:
         rows = await self._pool.fetch(

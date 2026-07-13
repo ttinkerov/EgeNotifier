@@ -6,7 +6,6 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.enums import ParseMode
-from aiogram.fsm.storage.memory import MemoryStorage
 from loguru import logger
 
 from egebot.bot.handlers import auth, callbacks, commands, fallback, menu, universities
@@ -18,6 +17,7 @@ from egebot.bot.middlewares.deps import DependenciesMiddleware
 from egebot.config import get_settings
 from egebot.core.rustest import RustestClient
 from egebot.logging_setup import setup_logging
+from egebot.security.crypto import FieldEncryptor
 from egebot.services.admin import AdminService
 from egebot.services.auth import AuthService
 from egebot.services.scores import ScoresService
@@ -26,6 +26,7 @@ from egebot.services.settings import SettingsService
 from egebot.services.universities import UniversitiesService
 from egebot.services.watcher import ScoresWatcher
 from egebot.storage.database import Database, DatabaseError
+from egebot.storage.fsm import PostgresFSMStorage
 from egebot.storage.repositories import AccountRepository, AuthDraftRepository, ScoreHistoryRepository
 
 
@@ -39,8 +40,9 @@ def _build_dispatcher(
     uni_svc: UniversitiesService,
     admin_svc: AdminService,
     drafts: AuthDraftRepository,
+    storage: PostgresFSMStorage,
 ) -> Dispatcher:
-    dp = Dispatcher(storage=MemoryStorage())
+    dp = Dispatcher(storage=storage)
     dp.update.middleware(ErrorMiddleware())
     dp.update.middleware(
         DependenciesMiddleware(
@@ -76,11 +78,12 @@ async def _run() -> None:
         logger.error("{}", exc)
         raise SystemExit(1) from exc
 
+    encryptor = FieldEncryptor(settings.data_encryption_key)
     rustest = RustestClient(settings)
     await rustest.open()
 
-    accounts = AccountRepository(db.pool)
-    drafts = AuthDraftRepository(db.pool)
+    accounts = AccountRepository(db.pool, encryptor)
+    drafts = AuthDraftRepository(db.pool, encryptor)
     history = ScoreHistoryRepository(db.pool)
     scores_svc = ScoresService(accounts, history, rustest)
     session_svc = SessionService(accounts, drafts)
@@ -88,6 +91,7 @@ async def _run() -> None:
     settings_svc = SettingsService(accounts)
     uni_svc = UniversitiesService()
     admin_svc = AdminService(settings, accounts, drafts, history)
+    fsm_storage = PostgresFSMStorage(db.pool)
 
     session = AiohttpSession(proxy=settings.proxy_url) if settings.proxy_url else None
     bot = Bot(
@@ -104,6 +108,7 @@ async def _run() -> None:
         uni_svc=uni_svc,
         admin_svc=admin_svc,
         drafts=drafts,
+        storage=fsm_storage,
     )
 
     logger.info("EgeNotifier {} is up", settings.app_version)
@@ -117,6 +122,7 @@ async def _run() -> None:
             await watcher_task
         except asyncio.CancelledError:
             pass
+        await fsm_storage.close()
         await bot.session.close()
         await rustest.close()
         await db.disconnect()

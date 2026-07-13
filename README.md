@@ -14,6 +14,8 @@
 - 🎯 **Подбор вузов** по сумме баллов (бюджет / платное)
 - 📈 История изменений по каждому предмету
 - 🔐 Удобная авторизация без постоянного ввода данных
+- 🔒 Шифрование session token / document_ref в PostgreSQL
+- 💾 FSM в Postgres (состояния переживают рестарт)
 
 ## Скриншоты и демонстрация
 
@@ -29,9 +31,19 @@ cd EgeNotifier
 cp .env.default .env
 ```
 
-Заполни `.env` (токен бота, PostgreSQL, свой Telegram ID).
+Заполни `.env` (токен бота, PostgreSQL, свой Telegram ID, `DATA_ENCRYPTION_KEY`):
 
 ```bash
-pip install -e .
-py main.py
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+```bash
+pip install -e ".[dev]"
+python main.py
+```
+
+## Тесты
+
+```bash
+pytest
 ```
