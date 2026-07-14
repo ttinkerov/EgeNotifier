@@ -19,11 +19,16 @@ ADMIN_PORTAL_DOWN = (
 
 ADMIN_PORTAL_RECOVERED = "✅ Портал проверки ЕГЭ снова отвечает."
 
+ADMIN_CATALOG_RELOADED = "Каталог вузов перезагружен: *{count}* программ."
+
+ADMIN_CATALOG_INVALID = "Не удалось перезагрузить каталог:\n`{error}`"
+
 
 def format_stats(
     *,
     version: str,
     total_users: int,
+    active_sessions: int,
     with_scores: int,
     alerts_enabled: int,
     spoiler_enabled: int,
@@ -34,6 +39,7 @@ def format_stats(
         f"{ADMIN_STATS_HEADER}\n"
         f"Версия: `{version}`\n\n"
         f"Пользователей: *{total_users}*\n"
+        f"Активных сессий: *{active_sessions}*\n"
         f"С баллами: *{with_scores}*\n"
         f"Уведомления вкл: *{alerts_enabled}*\n"
         f"Спойлер вкл: *{spoiler_enabled}*\n"

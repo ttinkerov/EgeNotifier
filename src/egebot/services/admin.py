@@ -36,6 +36,7 @@ class AdminService:
         account_stats = await self._accounts.count_stats()
         return AdminStats(
             total_users=account_stats["total_users"],
+            active_sessions=account_stats.get("active_sessions", 0),
             with_scores=account_stats["with_scores"],
             alerts_enabled=account_stats["alerts_enabled"],
             spoiler_enabled=account_stats["spoiler_enabled"],
@@ -47,6 +48,7 @@ class AdminService:
         return t.format_stats(
             version=self._settings.app_version,
             total_users=stats.total_users,
+            active_sessions=stats.active_sessions,
             with_scores=stats.with_scores,
             alerts_enabled=stats.alerts_enabled,
             spoiler_enabled=stats.spoiler_enabled,

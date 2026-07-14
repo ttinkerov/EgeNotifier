@@ -93,13 +93,15 @@ async def send_history(message: Message, session_svc: SessionService, scores_svc
     if user is None:
         return
 
-    account = await session_svc.get_account(user.id)
-    if account is None:
+    profile = await session_svc.get_profile(user.id)
+    if profile is None:
         await message.answer(t.NEED_AUTH_HISTORY, reply_markup=guest_keyboard())
         return
 
     text = await scores_svc.render_history(user.id)
     await message.answer(text, parse_mode=SCORES_PARSE_MODE, reply_markup=refresh_scores_kb())
+    if not profile.has_session:
+        await message.answer(t.NEED_AUTH, reply_markup=guest_keyboard())
 
 
 async def finish_login(

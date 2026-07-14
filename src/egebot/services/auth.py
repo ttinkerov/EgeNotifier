@@ -85,11 +85,15 @@ class AuthService:
             return status, None
 
         assert draft.subject_code is not None
+        existing = await self._accounts.get(telegram_id)
         await self._accounts.save(
             TgAccount(
                 telegram_id=telegram_id,
                 subject_code=draft.subject_code,
                 session_token=token,
+                alerts_enabled=True,
+                spoiler_scores=existing.spoiler_scores if existing else False,
+                snapshot_hash=existing.snapshot_hash if existing else None,
             )
         )
         fetch = await self._rustest.fetch_scores(token)

@@ -124,9 +124,9 @@ async def on_scores_history(
         await callback.answer()
         return
 
-    account = await session_svc.get_account(callback.from_user.id)
+    account = await session_svc.get_profile(callback.from_user.id)
     if account is None:
-        await callback.answer(t.NEED_AUTH, show_alert=True)
+        await callback.answer(t.NEED_AUTH_HISTORY, show_alert=True)
         return
 
     text = await scores_svc.render_history(callback.from_user.id)

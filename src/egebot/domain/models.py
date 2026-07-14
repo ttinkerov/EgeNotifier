@@ -35,10 +35,14 @@ class ExamScore(BaseModel):
 class TgAccount(BaseModel):
     telegram_id: int
     subject_code: int
-    session_token: str
+    session_token: str | None = None
     alerts_enabled: bool = True
     spoiler_scores: bool = False
     snapshot_hash: str | None = None
+
+    @property
+    def has_session(self) -> bool:
+        return bool(self.session_token)
 
 
 class AuthDraft(BaseModel):

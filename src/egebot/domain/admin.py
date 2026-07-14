@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 class AdminStats(BaseModel):
     total_users: int = 0
+    active_sessions: int = 0
     with_scores: int = 0
     alerts_enabled: int = 0
     spoiler_enabled: int = 0

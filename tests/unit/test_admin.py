@@ -21,6 +21,7 @@ def admin_svc() -> AdminService:
     history = AsyncMock()
     accounts.count_stats.return_value = {
         "total_users": 10,
+        "active_sessions": 8,
         "with_scores": 7,
         "alerts_enabled": 9,
         "spoiler_enabled": 2,
@@ -40,6 +41,7 @@ async def test_collect_stats(admin_svc: AdminService) -> None:
     stats = await admin_svc.collect_stats()
     assert stats == AdminStats(
         total_users=10,
+        active_sessions=8,
         with_scores=7,
         alerts_enabled=9,
         spoiler_enabled=2,
@@ -52,6 +54,7 @@ def test_format_stats_contains_numbers(admin_svc: AdminService) -> None:
     text = admin_svc.format_stats(
         AdminStats(
             total_users=3,
+            active_sessions=2,
             with_scores=2,
             alerts_enabled=3,
             spoiler_enabled=1,
@@ -60,6 +63,7 @@ def test_format_stats_contains_numbers(admin_svc: AdminService) -> None:
         )
     )
     assert "Пользователей: *3*" in text
+    assert "Активных сессий: *2*" in text
     assert "С баллами: *2*" in text
     assert "Событий в истории: *4*" in text
 

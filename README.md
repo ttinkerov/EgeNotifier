@@ -42,6 +42,22 @@ pip install -e ".[dev]"
 python main.py
 ```
 
+## Каталог вузов
+
+Проверить JSON:
+
+```bash
+update-universities path/to/catalog.json --check
+```
+
+Установить в `src/egebot/data/universities.json`:
+
+```bash
+update-universities path/to/catalog.json
+```
+
+В боте админ может перезагрузить каталог из файла на диске без рестарта: `/reload_unis`.
+
 ## Тесты
 
 ```bash

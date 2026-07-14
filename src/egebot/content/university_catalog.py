@@ -8,7 +8,7 @@ from pathlib import Path
 from egebot.domain.models import ExamScore
 from egebot.domain.universities import UniversityProgram, UserScores
 
-_CATALOG_PATH = Path(__file__).resolve().parent.parent / "data" / "universities.json"
+CATALOG_PATH = Path(__file__).resolve().parent.parent / "data" / "universities.json"
 
 SUBJECT_LABELS: dict[str, str] = {
     "russian": "Русский язык",
@@ -86,7 +86,46 @@ def scores_from_exams(exams: list[ExamScore]) -> UserScores:
     return UserScores(subjects=subjects)
 
 
+def parse_programs(raw: object) -> tuple[UniversityProgram, ...]:
+    if not isinstance(raw, list):
+        raise ValueError("Каталог должен быть JSON-массивом программ")
+    if not raw:
+        raise ValueError("Каталог пуст")
+    programs = tuple(UniversityProgram.model_validate(item) for item in raw)
+    ids = [program.id for program in programs]
+    if len(ids) != len(set(ids)):
+        raise ValueError("В каталоге есть дублирующиеся id программ")
+    return programs
+
+
+def load_programs_from_path(path: Path) -> tuple[UniversityProgram, ...]:
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    return parse_programs(raw)
+
+
 @lru_cache
 def load_programs() -> tuple[UniversityProgram, ...]:
-    raw = json.loads(_CATALOG_PATH.read_text(encoding="utf-8"))
-    return tuple(UniversityProgram.model_validate(item) for item in raw)
+    return load_programs_from_path(CATALOG_PATH)
+
+
+def reload_programs() -> tuple[UniversityProgram, ...]:
+    load_programs.cache_clear()
+    return load_programs()
+
+
+def write_catalog(programs: tuple[UniversityProgram, ...] | list[UniversityProgram], path: Path) -> int:
+    payload = [program.model_dump(mode="json") for program in programs]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    if path.resolve() == CATALOG_PATH.resolve():
+        reload_programs()
+    return len(payload)
+
+
+def update_catalog_from_file(source: Path, *, dest: Path | None = None) -> int:
+    target = dest or CATALOG_PATH
+    programs = load_programs_from_path(source)
+    return write_catalog(programs, target)

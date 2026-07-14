@@ -50,9 +50,9 @@ async def test_watcher_marks_expired_session() -> None:
     failed = await watcher._check_account(account)
 
     assert failed is False
-    accounts.delete.assert_awaited_once_with(7)
+    accounts.invalidate_session.assert_awaited_once_with(7)
     bot.send_message.assert_awaited()
-    args, kwargs = bot.send_message.await_args
+    args, _kwargs = bot.send_message.await_args
     assert args[0] == 7
     assert "истекла" in args[1].lower() or "Сессия" in args[1]
 

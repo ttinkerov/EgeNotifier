@@ -91,6 +91,12 @@ class Database:
                 ADD COLUMN IF NOT EXISTS spoiler_scores BOOLEAN NOT NULL DEFAULT FALSE
                 """
             )
+            await conn.execute(
+                """
+                ALTER TABLE tg_accounts
+                ALTER COLUMN session_token DROP NOT NULL
+                """
+            )
 
     @property
     def pool(self) -> asyncpg.Pool:

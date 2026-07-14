@@ -24,6 +24,7 @@ dev = [
 
 [project.scripts]
 egenotifier = "egebot.app:main"
+update-universities = "egebot.tools.update_universities:main"
 
 [build-system]
 requires = ["setuptools>=68"]

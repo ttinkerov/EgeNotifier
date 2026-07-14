@@ -13,10 +13,12 @@ class AccountRepository:
 
     def _to_model(self, row: asyncpg.Record) -> TgAccount:
         data = dict(row)
-        data["session_token"] = self._crypto.decrypt(data["session_token"])
+        raw_token = data.get("session_token")
+        data["session_token"] = self._crypto.decrypt(raw_token) if raw_token else None
         return TgAccount.model_validate(data)
 
     async def get(self, telegram_id: int) -> TgAccount | None:
+        """Return profile row even if session is inactive (token cleared)."""
         row = await self._pool.fetchrow(
             """
             SELECT telegram_id, subject_code, session_token,
@@ -29,6 +31,22 @@ class AccountRepository:
             return None
         return self._to_model(row)
 
+    async def get_active(self, telegram_id: int) -> TgAccount | None:
+        account = await self.get(telegram_id)
+        if account is None or not account.has_session:
+            return None
+        return account
+
+    async def has_active_session(self, telegram_id: int) -> bool:
+        val = await self._pool.fetchval(
+            """
+            SELECT 1 FROM tg_accounts
+            WHERE telegram_id = $1 AND session_token IS NOT NULL
+            """,
+            telegram_id,
+        )
+        return val is not None
+
     async def exists(self, telegram_id: int) -> bool:
         val = await self._pool.fetchval(
             "SELECT 1 FROM tg_accounts WHERE telegram_id = $1",
@@ -37,7 +55,11 @@ class AccountRepository:
         return val is not None
 
     async def save(self, account: TgAccount) -> None:
-        token = self._crypto.encrypt(account.session_token) or account.session_token
+        token = (
+            self._crypto.encrypt(account.session_token)
+            if account.session_token
+            else None
+        )
         await self._pool.execute(
             """
             INSERT INTO tg_accounts (
@@ -49,6 +71,7 @@ class AccountRepository:
                 subject_code = EXCLUDED.subject_code,
                 session_token = EXCLUDED.session_token,
                 alerts_enabled = EXCLUDED.alerts_enabled,
+                spoiler_scores = EXCLUDED.spoiler_scores,
                 snapshot_hash = EXCLUDED.snapshot_hash,
                 linked_at = NOW()
             """,
@@ -60,6 +83,18 @@ class AccountRepository:
             account.snapshot_hash,
         )
 
+    async def invalidate_session(self, telegram_id: int) -> bool:
+        """Clear portal session but keep profile, prefs, and score history."""
+        result = await self._pool.execute(
+            """
+            UPDATE tg_accounts
+            SET session_token = NULL
+            WHERE telegram_id = $1 AND session_token IS NOT NULL
+            """,
+            telegram_id,
+        )
+        return result.endswith("1")
+
     async def list_with_alerts(self) -> list[TgAccount]:
         rows = await self._pool.fetch(
             """
@@ -67,6 +102,7 @@ class AccountRepository:
                    alerts_enabled, spoiler_scores, snapshot_hash
             FROM tg_accounts
             WHERE alerts_enabled = TRUE
+              AND session_token IS NOT NULL
             ORDER BY linked_at
             """
         )
@@ -74,7 +110,11 @@ class AccountRepository:
 
     async def list_ids(self) -> list[int]:
         rows = await self._pool.fetch(
-            "SELECT telegram_id FROM tg_accounts ORDER BY linked_at"
+            """
+            SELECT telegram_id FROM tg_accounts
+            WHERE session_token IS NOT NULL
+            ORDER BY linked_at
+            """
         )
         return [int(row["telegram_id"]) for row in rows]
 
@@ -83,8 +123,11 @@ class AccountRepository:
             """
             SELECT
                 COUNT(*)::int AS total_users,
+                COUNT(*) FILTER (WHERE session_token IS NOT NULL)::int AS active_sessions,
                 COUNT(*) FILTER (WHERE snapshot_hash IS NOT NULL)::int AS with_scores,
-                COUNT(*) FILTER (WHERE alerts_enabled)::int AS alerts_enabled,
+                COUNT(*) FILTER (
+                    WHERE alerts_enabled AND session_token IS NOT NULL
+                )::int AS alerts_enabled,
                 COUNT(*) FILTER (WHERE spoiler_scores)::int AS spoiler_enabled
             FROM tg_accounts
             """

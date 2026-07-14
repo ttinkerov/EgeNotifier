@@ -9,6 +9,7 @@ from egebot.bot.filters.admin import IsAdmin
 from egebot.bot.states import AdminFlow
 from egebot.content import admin_copy as t
 from egebot.services.admin import AdminService
+from egebot.services.universities import UniversitiesService
 
 router = Router(name="admin")
 router.message.filter(IsAdmin())
@@ -29,6 +30,16 @@ async def cmd_broadcast(message: Message, state: FSMContext) -> None:
 @router.message(Command("version"))
 async def cmd_version(message: Message, admin_svc: AdminService) -> None:
     await message.answer(f"EgeNotifier `{admin_svc.app_version}`")
+
+
+@router.message(Command("reload_unis", "reload_catalog"))
+async def cmd_reload_unis(message: Message, uni_svc: UniversitiesService) -> None:
+    try:
+        count = uni_svc.reload_catalog()
+    except Exception as exc:  # noqa: BLE001 — show error to admin
+        await message.answer(t.ADMIN_CATALOG_INVALID.format(error=exc))
+        return
+    await message.answer(t.ADMIN_CATALOG_RELOADED.format(count=count))
 
 
 @router.message(Command("cancel"), StateFilter(AdminFlow.broadcast))

@@ -39,17 +39,34 @@ class InMemoryAccounts:
     async def get(self, telegram_id: int) -> TgAccount | None:
         return self.items.get(telegram_id)
 
+    async def get_active(self, telegram_id: int) -> TgAccount | None:
+        account = self.items.get(telegram_id)
+        if account is None or not account.has_session:
+            return None
+        return account
+
+    async def has_active_session(self, telegram_id: int) -> bool:
+        account = self.items.get(telegram_id)
+        return bool(account and account.has_session)
+
     async def exists(self, telegram_id: int) -> bool:
         return telegram_id in self.items
 
     async def save(self, account: TgAccount) -> None:
         self.items[account.telegram_id] = account
 
+    async def invalidate_session(self, telegram_id: int) -> bool:
+        account = self.items.get(telegram_id)
+        if account is None or not account.has_session:
+            return False
+        self.items[telegram_id] = account.model_copy(update={"session_token": None})
+        return True
+
     async def list_with_alerts(self) -> list[TgAccount]:
-        return [a for a in self.items.values() if a.alerts_enabled]
+        return [a for a in self.items.values() if a.alerts_enabled and a.has_session]
 
     async def list_ids(self) -> list[int]:
-        return list(self.items)
+        return [tid for tid, a in self.items.items() if a.has_session]
 
     async def set_alerts_enabled(self, telegram_id: int, enabled: bool) -> None:
         account = self.items.get(telegram_id)

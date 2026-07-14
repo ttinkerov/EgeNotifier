@@ -3,7 +3,7 @@
 CREATE TABLE IF NOT EXISTS tg_accounts (
     telegram_id     BIGINT PRIMARY KEY,
     subject_code    SMALLINT NOT NULL,
-    session_token   TEXT NOT NULL,
+    session_token   TEXT,
     alerts_enabled  BOOLEAN NOT NULL DEFAULT TRUE,
     spoiler_scores  BOOLEAN NOT NULL DEFAULT FALSE,
     linked_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -21,7 +21,9 @@ CREATE TABLE IF NOT EXISTS auth_drafts (
 );
 
 CREATE INDEX IF NOT EXISTS idx_accounts_subject ON tg_accounts (subject_code);
-CREATE INDEX IF NOT EXISTS idx_accounts_alerts ON tg_accounts (alerts_enabled) WHERE alerts_enabled;
+CREATE INDEX IF NOT EXISTS idx_accounts_alerts
+    ON tg_accounts (alerts_enabled)
+    WHERE alerts_enabled AND session_token IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS score_snapshots (
     telegram_id     BIGINT PRIMARY KEY REFERENCES tg_accounts (telegram_id) ON DELETE CASCADE,

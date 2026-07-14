@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from egebot.content.university_catalog import load_programs
+from egebot.content.university_catalog import load_programs, reload_programs
 from egebot.domain.universities import (
     FundingType,
     MatchResult,
@@ -36,6 +36,12 @@ def _probability(margin: int) -> tuple[int, str]:
 
 
 class UniversitiesService:
+    def reload_catalog(self) -> int:
+        return len(reload_programs())
+
+    def catalog_size(self) -> int:
+        return len(load_programs())
+
     def find_best(
         self,
         scores: UserScores,

@@ -119,8 +119,8 @@ class ScoresWatcher:
         return False
 
     async def _handle_expired_session(self, account: TgAccount) -> None:
-        logger.info("Session expired for user {}, removing account", account.telegram_id)
-        await self._accounts.delete(account.telegram_id)
+        logger.info("Session expired for user {}, invalidating token", account.telegram_id)
+        await self._accounts.invalidate_session(account.telegram_id)
         try:
             await self._bot.send_message(
                 account.telegram_id,
